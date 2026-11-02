@@ -33,6 +33,25 @@ function replaceEntityList(text, pattern, entities) {
   return lines.join('\n');
 }
 
+function replaceEntityLists(text, pattern, entities) {
+  if (!entities.length) return text;
+  const lines = text.split('\n');
+  let changed = false;
+  for (let i = 0; i < lines.length;) {
+    if (!pattern.test(lines[i])) {
+      i++;
+      continue;
+    }
+    const indent = lines[i].slice(0, lines[i].search(/\S/));
+    let end = i;
+    while (end < lines.length && pattern.test(lines[end])) end++;
+    lines.splice(i, end - i, ...entities.map((e) => `${indent}- ${e}`));
+    i += entities.length;
+    changed = true;
+  }
+  return changed ? lines.join('\n') : text;
+}
+
 export function validate(selected, opts) {
   const errors = [];
   if (!selected.length) errors.push('select');
@@ -73,20 +92,9 @@ export function generate(templates, selected, opts) {
       text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.sensors);
       text = replaceEntityList(text, /^\s*- sensor\.example_\w+_battery/, opts.batteries);
     }
-    if (key === 'automation') {
-      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
-      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
-      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
-    }
-    if (key === 'disk') {
-      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
-      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
-      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
-    }
-    if (key === 'door') {
-      text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.doors);
-      text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.doors);
-    }
+    if (key === 'automation') text = replaceEntityLists(text, /^\s*- automation\.example_critical_/, opts.automations);
+    if (key === 'disk') text = replaceEntityLists(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
+    if (key === 'door') text = replaceEntityLists(text, /^\s*- binary_sensor\.example_/, opts.doors);
     text = text.replaceAll('notify.mobile_app_example', opts.notify);
     // Yorumlar kısaltılır: geriye yalnızca çalışan otomasyon kalır.
     text = text.split('\n').filter((l) => !/^#/.test(l)).join('\n').trim();

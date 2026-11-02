@@ -53,6 +53,14 @@ test('ikinci kanal verilirse yazılır', () => {
   assert.ok(out.includes('- action: notify.telegram'));
 });
 
+
+test('disk listesi default sensör de seçilince üç blokta da doğru yazılır', () => {
+  const out = generate(templates, ['disk'], { ...opts, disks: ['sensor.system_monitor_disk_usage', 'sensor.nas_disk'] });
+  assert.match(out, /variables:\n\s+disks:\n\s+- sensor\.system_monitor_disk_usage\n\s+- sensor\.nas_disk\n\s+warning_percent: 85/);
+  assert.match(out, /id: warning[\s\S]*?entity_id:\n\s+- sensor\.system_monitor_disk_usage\n\s+- sensor\.nas_disk\n\s+above: 85/);
+  assert.match(out, /id: critical[\s\S]*?entity_id:\n\s+- sensor\.system_monitor_disk_usage\n\s+- sensor\.nas_disk\n\s+above: 95/);
+});
+
 test('YAML kırabilecek girdiler reddedilir', () => {
   assert.deepEqual(validate(['camera'], { ...opts, notify: 'notify.x\n- evil: 1' }), ['notify']);
   assert.deepEqual(validate(['sensor'], { ...opts, sensors: ['binary_sensor.a: b'] }), ['sensors']);

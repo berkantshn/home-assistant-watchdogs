@@ -64,7 +64,7 @@ binary_sensor.boiler_gas</textarea></label>
       <label class="only" data-for="hue"><span data-t="hueEntry"></span><input type="text" id="hueEntry" spellcheck="false"><small data-t="hueHelp"></small></label>
       <label class="only" data-for="automation"><span data-t="automations"></span><textarea id="automations" spellcheck="false">automation.critical_alarm
 automation.critical_leak</textarea></label>
-      <label class="only" data-for="disk"><span data-t="disks"></span><textarea id="disks" spellcheck="false">sensor.system_monitor_disk_usage_config</textarea></label>
+      <label class="only" data-for="disk"><span data-t="disks"></span><textarea id="disks" spellcheck="false">sensor.system_monitor_disk_usage_config</textarea><small data-t="diskHelp"></small></label>
       <label class="only" data-for="door"><span data-t="doors"></span><textarea id="doors" spellcheck="false">binary_sensor.front_door
 binary_sensor.kitchen_window</textarea></label>
     </fieldset>
@@ -98,10 +98,10 @@ const T = {
     hue:'Hue bridge: reconnect failures, reloads the integration', tts:'Voice (TTS): moves to a local fallback when the cloud fails (needs extra setup, see the README)',
     automation:'Automation: critical automations off, unavailable or failing', backup:'Backup: no successful automatic backup for 48 hours', disk:'Disk: usage above warning/critical thresholds', door:'Door: listed doors/windows left open for 10 minutes',
     notify:'Notification service', second:'Second notification channel (optional)', sensors:'Critical sensors, one per line', batteries:'Battery sensors, one per line',
-    automations:'Critical automations, one per line', disks:'Disk usage sensors, one per line', doors:'Door/window binary sensors, one per line',
+    automations:'Critical automations, one per line', disks:'Disk usage sensors, one per line', diskHelp:'System Monitor disk usage sensors are disabled by default; enable your disk sensor first in Settings > Devices & services > System Monitor.', doors:'Door/window binary sensors, one per line',
     hueEntry:'Hue config entry ID', hueHelp:"In Developer Tools > Template, run {{ config_entry_id('light.your_hue_lamp') }}",
     copy:'Copy', copied:'Copied', download:'Download automations.yaml',
-    next1:'Back up Home Assistant.', next2:'Paste this into automations.yaml. Hue and voice also need the additions in configuration.example.yaml.', next3:'Check the configuration, restart, then trigger each watchdog and read its trace.',
+    next1:'Back up Home Assistant.', next2:'Paste this into automations.yaml. Hue, automation and voice also need the additions in configuration.example.yaml.', next3:'Check the configuration, restart, then trigger each watchdog and read its trace.',
     errSelect:'Choose at least one watchdog.', errField:'Please check the highlighted fields.',
   },
   tr: {
@@ -112,10 +112,10 @@ const T = {
     hue:'Hue köprüsü: yeniden bağlanma başarısızsa entegrasyonu yeniden yükler', tts:"Ses (TTS): bulut bozulunca yerel yedeğe geçer (ek kurulum gerekir, README'ye bak)",
     automation:'Otomasyon: kritik otomasyon kapanırsa, erişilemez kalırsa veya hata verirse', backup:'Yedek: 48 saattir başarılı otomatik yedek yoksa', disk:'Disk: kullanım uyarı/kritik eşiği geçerse', door:'Kapı: listedeki kapı/pencere 10 dakika açık kalırsa',
     notify:'Bildirim servisi', second:'İkinci bildirim kanalı (isteğe bağlı)', sensors:'Kritik sensörler, her satıra bir tane', batteries:'Pil sensörleri, her satıra bir tane',
-    automations:'Kritik otomasyonlar, her satıra bir tane', disks:'Disk kullanım sensörleri, her satıra bir tane', doors:'Kapı/pencere ikili sensörleri, her satıra bir tane',
+    automations:'Kritik otomasyonlar, her satıra bir tane', disks:'Disk kullanım sensörleri, her satıra bir tane', diskHelp:'System Monitor disk kullanım sensörleri varsayılan olarak kapalıdır; önce Ayarlar > Cihazlar ve servisler > System Monitor bölümünden disk sensörünü etkinleştir.', doors:'Kapı/pencere ikili sensörleri, her satıra bir tane',
     hueEntry:'Hue yapılandırma kimliği', hueHelp:"Geliştirici Araçları > Şablon içinde şunu çalıştır: {{ config_entry_id('light.hue_lambaniz') }}",
     copy:'Kopyala', copied:'Kopyalandı', download:'automations.yaml indir',
-    next1:"Home Assistant'ın yedeğini al.", next2:"Bunu automations.yaml dosyasına yapıştır. Hue ve ses için configuration.example.yaml eklemeleri de gerekir.", next3:'Yapılandırmayı kontrol et, yeniden başlat, sonra her bekçiyi tetikleyip izini (trace) oku.',
+    next1:"Home Assistant'ın yedeğini al.", next2:"Bunu automations.yaml dosyasına yapıştır. Hue, otomasyon ve ses için configuration.example.yaml eklemeleri de gerekir.", next3:'Yapılandırmayı kontrol et, yeniden başlat, sonra her bekçiyi tetikleyip izini (trace) oku.',
     errSelect:'En az bir bekçi seç.', errField:'İşaretli alanları kontrol et.',
   },
 };
