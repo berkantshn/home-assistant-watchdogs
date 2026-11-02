@@ -1,0 +1,86 @@
+# Made By FALCREB
+# Disk Bekçisi: disk kullanımı %85'i geçince uyarı, %95'i geçince kritik bildirim
+# gönderir. Günlük kontrol, bekçi kurulmadan önce dolmuş diski ve okunamayan sensörü
+# de yakalar; disk dolu kaldıkça her gün bir kez hatırlatır.
+# EN: Disk Space Watchdog. Warns above 85%, sends a critical alert above 95%. A daily
+# check also catches a disk that was already full and a sensor that cannot be read,
+# and repeats once a day while the disk stays full.
+#
+# Gereksinim / Requires: System Monitor entegrasyonu ve disk kullanım yüzdesi sensörü
+# EN: the System Monitor integration and its disk usage percent sensor
+#
+# Doldurulacaklar / Replace before use:
+#   sensor.system_monitor_disk_usage: kendi sensörünüz, 3 yerde aynı liste. Bu sensör
+#     varsayılan olarak kapalıdır: Settings > Devices & services > System Monitor
+#     altından etkinleştirin. Kimlik, bağlama noktasına ve arayüz diline göre değişir;
+#     örneğin /config için sensor.system_monitor_disk_usage_config. Verinizin durduğu
+#     diski seçin.
+#     EN: your sensor, same list in 3 places. It is disabled by default: enable it under
+#     Settings > Devices & services > System Monitor. The id depends on the mount point
+#     and UI language, for example sensor.system_monitor_disk_usage_config for /config.
+#     Pick the disk that holds your data.
+#   above: 85, above: 95 ve warning_percent, critical_percent aynı olmalı
+#     EN: the trigger values and the variables must match
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#   09:20:00: günlük kontrol saati / daily check time
+#
+# Not: Docker kurulumunda yüzde, kabın gördüğü diski yansıtır. Yedek diskini ayrıca
+# izlemek için onun sensörünü de ekleyin.
+# EN: in Docker the percentage is what the container sees. Add other disks' sensors too.
+#
+# Not: 5 dakikalık süre, sınırda dalgalanan diskte bildirim sayısını azaltır ama
+# tamamen engellemez. Disk bu süreden hızlı dolarsa uyarı geç kalır.
+# EN: the 5 minutes reduces repeated alerts at a threshold but does not stop them. A
+# disk filling faster than that is reported late.
+
+- id: example_disk_space_watchdog
+  alias: Example - Disk Space Watchdog
+  description: Alerts when disk use crosses warning or critical levels, with a daily re-check.
+  variables:
+    disks:
+    - sensor.system_monitor_disk_usage
+    warning_percent: 85
+    critical_percent: 95
+  triggers:
+  - trigger: numeric_state
+    id: warning
+    entity_id:
+    - sensor.system_monitor_disk_usage
+    above: 85
+    for:
+      minutes: 5
+  - trigger: numeric_state
+    id: critical
+    entity_id:
+    - sensor.system_monitor_disk_usage
+    above: 95
+    for:
+      minutes: 5
+  - trigger: time
+    id: daily_check
+    at: '09:20:00'
+  conditions:
+  # Disk iki eşiği birden geçerse yalnızca kritik bildirim gider.
+  # EN: when both levels are crossed together, only the critical alert is sent.
+  - condition: template
+    value_template: >-
+      {{ trigger.id != 'warning' or states(trigger.entity_id) | float(0) <= critical_percent }}
+  actions:
+  - variables:
+      alert_message: >-
+        {% if trigger.id == 'warning' %}Disk usage high ({{ states(trigger.entity_id) }}%): {{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}
+        {%- elif trigger.id == 'critical' %}Disk usage CRITICAL ({{ states(trigger.entity_id) }}%): {{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}
+        {%- else %}{% set found = namespace(items=[]) %}{% for e in disks %}{% set name = state_attr(e, 'friendly_name') or e %}{% set v = states(e) %}{% if not is_number(v) %}{% set found.items = found.items + ['no reading from ' ~ name ~ ' (' ~ v ~ ')'] %}{% elif v | float > critical_percent %}{% set found.items = found.items + ['CRITICAL ' ~ name ~ ' ' ~ v ~ '%'] %}{% elif v | float > warning_percent %}{% set found.items = found.items + ['high ' ~ name ~ ' ' ~ v ~ '%'] %}{% endif %}{% endfor %}{% if found.items %}Disk check: {{ found.items | join(', ') }}{% endif %}
+        {%- endif %}
+  # Günlük kontrolde sorun yoksa mesaj boştur ve akış burada biter.
+  # EN: the daily check leaves the message empty when all is well, ending the run here.
+  - condition: template
+    value_template: "{{ alert_message | length > 0 }}"
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: queued

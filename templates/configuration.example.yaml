@@ -6,8 +6,9 @@
 # then restart Home Assistant.
 
 # Log kayıtlarını system_log_event olayı olarak yayınlar.
-# hue_bridge_watchdog.yaml ve tts_failover_watchdog.yaml bunu gerektirir.
-# EN: publishes log records as events; both log-based watchdogs need this.
+# hue_bridge_watchdog.yaml, tts_failover_watchdog.yaml ve automation_watchdog.yaml
+# bunu gerektirir.
+# EN: publishes log records as events; all three log-based watchdogs need this.
 system_log:
   fire_event: true
 

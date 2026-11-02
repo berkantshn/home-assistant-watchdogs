@@ -16,6 +16,10 @@ They were generalized from a real install, where a lost bridge connection went u
 | [`sensor_watchdog.yaml`](templates/sensor_watchdog.yaml) | Critical sensors offline for 15 minutes, or batteries below 20% |
 | [`hue_bridge_watchdog.yaml`](templates/hue_bridge_watchdog.yaml) | Failed Hue bridge reconnects: reloads the integration and notifies you |
 | [`tts_failover_watchdog.yaml`](templates/tts_failover_watchdog.yaml) | Cloud text-to-speech failure: moves your assistant to a local fallback and back again |
+| [`automation_watchdog.yaml`](templates/automation_watchdog.yaml) | A listed critical automation turned off, unavailable or logging an error, with a daily check for one that was already off |
+| [`backup_watchdog.yaml`](templates/backup_watchdog.yaml) | No successful automatic backup for 48 hours, or a backup time that cannot be read |
+| [`disk_space_watchdog.yaml`](templates/disk_space_watchdog.yaml) | Disk use above 85% or 95%, with a daily check for a disk that was already full |
+| [`door_left_open_watchdog.yaml`](templates/door_left_open_watchdog.yaml) | A listed door or window open for 10 minutes, with a message when it closes |
 
 ## Install
 
@@ -28,9 +32,11 @@ They were generalized from a real install, where a lost bridge connection went u
 
 ## Testing status
 
-The templates were tested on a real Home Assistant 2026.10.4 in an isolated Docker container, with simulated devices and shortened wait times. `check_config` passed, and the camera, sensor, Hue and TTS scenarios passed after one bug was fixed.
+All eight templates were tested on a real Home Assistant 2026.10.4 in an isolated Docker container, with simulated devices and shortened wait times. `check_config` passed on the unmodified templates. The camera, sensor, Hue and TTS scenarios passed after one bug was fixed.
 
-Not yet tested: a real Hue bridge, real Azure and Piper, real phone notifications, real cameras and sensors, the full 10, 15 and 30 minute waits, and Home Assistant OS or HTTPS setups. Try each watchdog on your own system. The TTS script connects to `http://localhost:8123`, so an HTTPS-only setup needs that address changed.
+The automation, backup, disk and door scenarios also passed, using real automation errors and restarts, a real automatic backup with the Backup integration, and the real System Monitor disk sensor. High and low disk values, and old or unreadable backup times, were simulated.
+
+Not yet tested: a real Hue bridge, real Azure and Piper, real phone notifications, real cameras and sensors, real door and window sensors, a backup whose upload fails, a really full disk, backups made by add-ons, the full waits (1, 5, 10, 15 and 30 minutes), a Home Assistant language other than English, and Home Assistant OS or HTTPS setups. Try each watchdog on your own system. The TTS script connects to `http://localhost:8123`, so an HTTPS-only setup needs that address changed.
 
 ## Limits
 
@@ -64,6 +70,10 @@ Kamera düşer, sensörün pili biter, köprünün bağlantısı kopar ya da ses
 | [`sensor_watchdog.yaml`](templates/sensor_watchdog.yaml) | 15 dakika çevrimdışı kalan kritik sensörler veya %20'nin altına düşen piller |
 | [`hue_bridge_watchdog.yaml`](templates/hue_bridge_watchdog.yaml) | Hue köprüsüne yeniden bağlanamama: entegrasyonu yeniden yükler ve bildirir |
 | [`tts_failover_watchdog.yaml`](templates/tts_failover_watchdog.yaml) | Bulut ses motoru arızası: asistanı yerel yedeğe geçirir, düzelince geri alır |
+| [`automation_watchdog.yaml`](templates/automation_watchdog.yaml) | Listedeki kritik otomasyonun kapatılması, erişilemez kalması veya hata vermesi; zaten kapalı olanı da günlük kontrolle yakalar |
+| [`backup_watchdog.yaml`](templates/backup_watchdog.yaml) | 48 saattir başarılı otomatik yedek olmaması veya yedek tarihinin okunamaması |
+| [`disk_space_watchdog.yaml`](templates/disk_space_watchdog.yaml) | Disk kullanımının %85 veya %95'i geçmesi; zaten dolu diski de günlük kontrolle yakalar |
+| [`door_left_open_watchdog.yaml`](templates/door_left_open_watchdog.yaml) | Listedeki kapı veya pencerenin 10 dakika açık kalması; kapanınca da haber verir |
 
 ## Kurulum
 
@@ -76,9 +86,11 @@ Kamera düşer, sensörün pili biter, köprünün bağlantısı kopar ya da ses
 
 ## Test durumu
 
-Şablonlar, izole bir Docker kabındaki gerçek Home Assistant 2026.10.4 üzerinde, sanal cihazlarla ve kısaltılmış bekleme süreleriyle test edildi. `check_config` geçti; bulunan bir hata düzeltildikten sonra kamera, sensör, Hue ve ses motoru senaryoları da geçti.
+Sekiz şablonun tamamı, izole bir Docker kabındaki gerçek Home Assistant 2026.10.4 üzerinde, sanal cihazlarla ve kısaltılmış bekleme süreleriyle test edildi. `check_config`, değiştirilmemiş şablonlarda geçti. Bulunan bir hata düzeltildikten sonra kamera, sensör, Hue ve ses motoru senaryoları da geçti.
 
-Henüz test edilmeyenler: gerçek Hue köprüsü, gerçek Azure ve Piper, telefona gerçek bildirim, gerçek kamera ve sensörler, tam 10, 15 ve 30 dakikalık beklemeler, Home Assistant OS ve HTTPS kurulumları. Her bekçiyi kendi sisteminde dene. Ses motoru betiği `http://localhost:8123` adresine bağlanır; yalnızca HTTPS kullanan kurulumlarda bu adresi değiştirmen gerekir.
+Otomasyon, yedek, disk ve kapı senaryoları da geçti. Bu testlerde gerçek otomasyon hataları ve yeniden başlatmalar, Backup entegrasyonuyla alınan gerçek bir otomatik yedek ve System Monitor'ün gerçek disk sensörü kullanıldı. Yüksek ve düşük disk değerleri ile eski veya okunamayan yedek tarihleri simüle edildi.
+
+Henüz test edilmeyenler: gerçek Hue köprüsü, gerçek Azure ve Piper, telefona gerçek bildirim, gerçek kamera ve sensörler, gerçek kapı ve pencere sensörleri, yüklemesi başarısız olan yedek, gerçekten dolu disk, eklentilerin aldığı yedekler, tam beklemeler (1, 5, 10, 15 ve 30 dakika), İngilizce dışında bir Home Assistant dili, Home Assistant OS ve HTTPS kurulumları. Her bekçiyi kendi sisteminde dene. Ses motoru betiği `http://localhost:8123` adresine bağlanır; yalnızca HTTPS kullanan kurulumlarda bu adresi değiştirmen gerekir.
 
 ## Sınırlar
 
