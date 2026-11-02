@@ -4,6 +4,9 @@ Bu proje [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) formatını ta
 
 ## [Unreleased]
 
+### Eklenenler
+- Otomasyon, yedek, disk ve açık kapı bekçisi şablonları eklendi. Tarayıcıdaki ayar üreteci henüz bu dört bekçiyi sunmuyor.
+
 ## [1.0.0] - 2026-11-02
 
 ### Eklenenler
