@@ -2,6 +2,10 @@
 
 **Know when your Home Assistant silently breaks.**
 
+**[▶ Build your automations online](https://berkantshn.github.io/home-assistant-watchdogs/)** · **[⬇ Download all templates](https://github.com/berkantshn/home-assistant-watchdogs/releases/latest/download/home-assistant-watchdogs.zip)**
+
+The generator runs entirely in your browser: fill in your own names and copy the result.
+
 *[Türkçe açıklama aşağıda](#türkçe)*
 
 A camera drops off, a sensor battery dies, a bridge loses its connection, or your voice assistant stops talking, and nothing tells you. These ready-to-use automations turn silent failures into notifications.
@@ -18,6 +22,8 @@ They were generalized from a real install, where a lost bridge connection went u
 | [`tts_failover_watchdog.yaml`](templates/tts_failover_watchdog.yaml) | Cloud text-to-speech failure: moves your assistant to a local fallback and back again |
 
 ## Install
+
+The quickest way is the [online generator](https://berkantshn.github.io/home-assistant-watchdogs/), which fills in steps 2 and 3 for you. To do it by hand:
 
 1. Back up Home Assistant first.
 2. Copy the watchdogs you want into `automations.yaml`, or create them in YAML mode in the UI.
@@ -52,6 +58,10 @@ The [guide](docs/pi5-reliability-guide.md) covers backups, stable addresses, sec
 
 **Home Assistant'ın sessizce bozulduğunu anında öğren.**
 
+**[▶ Otomasyonlarını çevrimiçi oluştur](https://berkantshn.github.io/home-assistant-watchdogs/)** · **[⬇ Tüm şablonları indir](https://github.com/berkantshn/home-assistant-watchdogs/releases/latest/download/home-assistant-watchdogs.zip)**
+
+Üreteç tamamen tarayıcında çalışır: kendi adlarını yaz, sonucu kopyala.
+
 Kamera düşer, sensörün pili biter, köprünün bağlantısı kopar ya da sesli asistan konuşmayı bırakır ve kimse sana haber vermez. Bu hazır otomasyonlar, sessiz arızaları bildirime dönüştürür.
 
 Şablonlar gerçek bir kurulumdan genelleştirildi. O kurulumda kopan bir köprü bağlantısı 3 gün fark edilmemiş, bir güvenlik otomasyonu da aylarca kapalı kalmıştı.
@@ -66,6 +76,8 @@ Kamera düşer, sensörün pili biter, köprünün bağlantısı kopar ya da ses
 | [`tts_failover_watchdog.yaml`](templates/tts_failover_watchdog.yaml) | Bulut ses motoru arızası: asistanı yerel yedeğe geçirir, düzelince geri alır |
 
 ## Kurulum
+
+En hızlı yol [çevrimiçi üreteç](https://berkantshn.github.io/home-assistant-watchdogs/): kendi adlarını yazarsın, 2. ve 3. adımları senin için doldurur. Elle yapmak için:
 
 1. Önce Home Assistant yedeği al.
 2. İstediğin bekçileri `automations.yaml` dosyasına kopyala ya da arayüzde YAML modunda oluştur.

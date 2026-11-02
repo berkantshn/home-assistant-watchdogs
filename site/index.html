@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Assistant Watchdogs: config generator</title>
+<meta name="description" content="Build ready-to-paste Home Assistant watchdog automations in your browser. Nothing leaves your device.">
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --card:#fff; --text:#1c2026; --muted:#5d6672; --line:#d9dde3; --accent:#0b6bcb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171b; --card:#1d2126; --text:#e7eaee; --muted:#9aa4b0; --line:#333a42; --accent:#6db3ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 18px 64px; }
+  h1 { margin:0 0 6px; font-size:1.8rem; }
+  .lead { color:var(--muted); margin:0 0 22px; }
+  .bar { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
+  a { color:var(--accent); }
+  button { font:inherit; padding:9px 16px; border-radius:7px; border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  @media (prefers-color-scheme: dark) { button.primary { color:#08131f; } }
+  fieldset { border:1px solid var(--line); background:var(--card); border-radius:9px; padding:14px 16px; margin:0 0 16px; }
+  legend { font-weight:600; padding:0 6px; }
+  label { display:block; margin:8px 0; }
+  label.check { display:flex; gap:9px; align-items:baseline; }
+  input[type=text], textarea { width:100%; font:14px ui-monospace,Consolas,monospace; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--text); margin-top:4px; }
+  textarea { min-height:68px; }
+  small { color:var(--muted); display:block; }
+  .invalid { border-color:#d13c3c !important; }
+  .only[hidden] { display:none; }
+  #error { color:#d13c3c; min-height:1.4em; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:9px; padding:14px; overflow:auto; max-height:420px; font-size:13px; }
+  .next { padding-left:20px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <button id="lang" type="button">Türkçe</button>
+    <a href="https://github.com/berkantshn/home-assistant-watchdogs" data-t="repo"></a>
+    <a href="https://github.com/berkantshn/home-assistant-watchdogs/releases/latest/download/home-assistant-watchdogs.zip" data-t="zip"></a>
+  </div>
+  <h1 data-t="title"></h1>
+  <p class="lead" data-t="lead"></p>
+
+  <form id="form" novalidate>
+    <fieldset>
+      <legend data-t="pick"></legend>
+      <label class="check"><input type="checkbox" name="w" value="camera" checked><span data-t="camera"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="sensor" checked><span data-t="sensor"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="hue"><span data-t="hue"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="tts"><span data-t="tts"></span></label>
+    </fieldset>
+    <fieldset>
+      <legend data-t="values"></legend>
+      <label><span data-t="notify"></span><input type="text" id="notify" value="notify.mobile_app_my_phone" spellcheck="false"></label>
+      <label class="only" data-for="camera"><span data-t="second"></span><input type="text" id="second" spellcheck="false" placeholder="notify.telegram"></label>
+      <label class="only" data-for="sensor"><span data-t="sensors"></span><textarea id="sensors" spellcheck="false">binary_sensor.kitchen_smoke
+binary_sensor.boiler_gas</textarea></label>
+      <label class="only" data-for="sensor"><span data-t="batteries"></span><textarea id="batteries" spellcheck="false">sensor.kitchen_smoke_battery</textarea></label>
+      <label class="only" data-for="hue"><span data-t="hueEntry"></span><input type="text" id="hueEntry" spellcheck="false"><small data-t="hueHelp"></small></label>
+    </fieldset>
+    <button class="primary" type="submit" data-t="build"></button>
+    <p id="error" role="alert"></p>
+  </form>
+
+  <section id="result" hidden>
+    <div class="bar">
+      <button id="copy" type="button" data-t="copy"></button>
+      <button id="download" type="button" data-t="download"></button>
+    </div>
+    <pre id="output"></pre>
+    <ol class="next">
+      <li data-t="next1"></li>
+      <li data-t="next2"></li>
+      <li data-t="next3"></li>
+    </ol>
+  </section>
+</main>
+
+<script type="module">
+import { generate, validate } from './generator.js';
+
+const T = {
+  en: {
+    repo:'Source on GitHub', zip:'Download all templates (.zip)', title:'Home Assistant Watchdogs',
+    lead:'Know when your Home Assistant silently breaks. Fill in your own names and get automations ready to paste. Everything runs in this page; nothing is sent anywhere.',
+    pick:'1. Choose watchdogs', values:'2. Your values', build:'Build my automations',
+    camera:'Camera: any camera unavailable for 10 minutes', sensor:'Sensor: critical sensor offline for 15 minutes, or battery below 20%',
+    hue:'Hue bridge: reconnect failures, reloads the integration', tts:'Voice (TTS): moves to a local fallback when the cloud fails (needs extra setup, see the README)',
+    notify:'Notification service', second:'Second notification channel (optional)', sensors:'Critical sensors, one per line', batteries:'Battery sensors, one per line',
+    hueEntry:'Hue config entry ID', hueHelp:"In Developer Tools > Template, run {{ config_entry_id('light.your_hue_lamp') }}",
+    copy:'Copy', copied:'Copied', download:'Download automations.yaml',
+    next1:'Back up Home Assistant.', next2:'Paste this into automations.yaml. Hue and voice also need the additions in configuration.example.yaml.', next3:'Check the configuration, restart, then trigger each watchdog and read its trace.',
+    errSelect:'Choose at least one watchdog.', errField:'Please check the highlighted fields.',
+  },
+  tr: {
+    repo:"GitHub'da kaynak kod", zip:'Tüm şablonları indir (.zip)', title:'Home Assistant Bekçileri',
+    lead:"Home Assistant'ın sessizce bozulduğunu anında öğren. Kendi adlarını yaz, yapıştırmaya hazır otomasyonları al. Her şey bu sayfada çalışır, hiçbir yere veri gönderilmez.",
+    pick:'1. Bekçileri seç', values:'2. Kendi değerlerin', build:'Otomasyonlarımı oluştur',
+    camera:'Kamera: herhangi bir kamera 10 dakika erişilemez olursa', sensor:'Sensör: kritik sensör 15 dakika çevrimdışıysa veya pil %20 altındaysa',
+    hue:'Hue köprüsü: yeniden bağlanma başarısızsa entegrasyonu yeniden yükler', tts:"Ses (TTS): bulut bozulunca yerel yedeğe geçer (ek kurulum gerekir, README'ye bak)",
+    notify:'Bildirim servisi', second:'İkinci bildirim kanalı (isteğe bağlı)', sensors:'Kritik sensörler, her satıra bir tane', batteries:'Pil sensörleri, her satıra bir tane',
+    hueEntry:'Hue yapılandırma kimliği', hueHelp:"Geliştirici Araçları > Şablon içinde şunu çalıştır: {{ config_entry_id('light.hue_lambaniz') }}",
+    copy:'Kopyala', copied:'Kopyalandı', download:'automations.yaml indir',
+    next1:"Home Assistant'ın yedeğini al.", next2:"Bunu automations.yaml dosyasına yapıştır. Hue ve ses için configuration.example.yaml eklemeleri de gerekir.", next3:'Yapılandırmayı kontrol et, yeniden başlat, sonra her bekçiyi tetikleyip izini (trace) oku.',
+    errSelect:'En az bir bekçi seç.', errField:'İşaretli alanları kontrol et.',
+  },
+};
+const FILES = { camera:'camera_watchdog', sensor:'sensor_watchdog', hue:'hue_bridge_watchdog', tts:'tts_failover_watchdog' };
+const $ = (id) => document.getElementById(id);
+let lang = (navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = T[lang][el.dataset.t]; });
+  $('lang').textContent = lang === 'tr' ? 'English' : 'Türkçe';
+}
+const selected = () => [...document.querySelectorAll('input[name=w]:checked')].map((c) => c.value);
+function syncFields() {
+  const s = selected();
+  document.querySelectorAll('.only').forEach((el) => { el.hidden = !s.includes(el.dataset.for); });
+}
+const list = (id) => $(id).value.split('\n').map((l) => l.trim()).filter(Boolean);
+
+let lastOutput = '';
+$('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const opts = { notify:$('notify').value.trim(), second:$('second').value.trim(), hueEntry:$('hueEntry').value.trim(), sensors:list('sensors'), batteries:list('batteries') };
+  const s = selected();
+  const errors = validate(s, opts);
+  ['notify','second','hueEntry','sensors','batteries'].forEach((id) => $(id).classList.toggle('invalid', errors.includes(id)));
+  if (errors.length) {
+    $('error').textContent = T[lang][errors.includes('select') ? 'errSelect' : 'errField'];
+    $('result').hidden = true;
+    return;
+  }
+  $('error').textContent = '';
+  const templates = {};
+  await Promise.all(s.map(async (key) => {
+    const res = await fetch(`templates/${FILES[key]}.yaml`);
+    templates[key] = (await res.text()).replaceAll('\r\n', '\n');
+  }));
+  lastOutput = generate(templates, s, opts);
+  $('output').textContent = lastOutput;
+  $('result').hidden = false;
+  $('result').scrollIntoView({ behavior:'smooth' });
+});
+$('copy').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(lastOutput);
+  $('copy').textContent = T[lang].copied;
+  setTimeout(() => { $('copy').textContent = T[lang].copy; }, 1500);
+});
+$('download').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lastOutput], { type:'text/yaml' }));
+  a.download = 'automations.yaml';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('lang').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; applyLang(); });
+document.querySelectorAll('input[name=w]').forEach((c) => c.addEventListener('change', syncFields));
+applyLang();
+syncFields();
+</script>
+</body>
+</html>
