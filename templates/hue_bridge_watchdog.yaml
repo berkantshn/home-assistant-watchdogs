@@ -1,0 +1,50 @@
+# Made By FALCREB
+# Hue Köprü Bekçisi: Hue köprüsüne yeniden bağlanma denemeleri başarısız olunca
+# entegrasyonu yeniden yükler ve bildirim gönderir (en fazla 30 dakikada bir).
+# EN: Hue Bridge Watchdog. Reloads the Hue integration when reconnect attempts
+# fail and sends a notification, at most once every 30 minutes.
+#
+# Gereksinim / Requires: system_log.fire_event (configuration.example.yaml)
+#
+# Doldurulacaklar / Replace before use:
+#   CHANGE_ME_HUE_CONFIG_ENTRY_ID: Developer Tools > Template içinde şunu çalıştırın:
+#     {{ config_entry_id('light.example_hue_lamp') }}
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#
+# Not: Eşleşme log metnine bağlıdır; Home Assistant sürümü metni değiştirirse
+# bekçi sessizce çalışmaz. Güncellemelerden sonra kontrol edin.
+# EN: the match depends on log text, so re-check it after updates.
+# Bu uyarıyı aiohue'nin yalnızca v2 API kodu, her 10 başarısız denemede bir yazar.
+# EN: only aiohue's v2 API code logs this warning, once every 10 failed attempts.
+
+- id: example_hue_bridge_watchdog
+  alias: Example - Hue Bridge Watchdog
+  description: Reloads the Hue integration when reconnecting to the bridge fails.
+  triggers:
+  - trigger: event
+    event_type: system_log_event
+    event_data:
+      level: WARNING
+  conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.event.data.name is string
+         and trigger.event.data.name.startswith('aiohue')
+         and 'Attempts to (re)connect' in (trigger.event.data.message | join(' ')) }}
+  actions:
+  - action: homeassistant.reload_config_entry
+    data:
+      entry_id: CHANGE_ME_HUE_CONFIG_ENTRY_ID
+  - action: notify.persistent_notification
+    data:
+      message: Hue bridge connection was lost. The Hue integration was reloaded automatically.
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: Hue bridge connection was lost. The Hue integration was reloaded automatically.
+  # Bu bekleme, mode: single ile birlikte tekrar tetiklenmeyi 30 dakika engeller.
+  # EN: with mode: single, this delay acts as a 30-minute cooldown.
+  - delay:
+      minutes: 30
+  mode: single
+  max_exceeded: silent

@@ -1,0 +1,17 @@
+# Made By FALCREB
+# Şablonların ihtiyaç duyduğu configuration.yaml eklemeleri.
+# Bu blokları mevcut configuration.yaml dosyanızla birleştirin, sonra Home
+# Assistant'ı yeniden başlatın.
+# EN: additions required by the templates. Merge into your configuration.yaml,
+# then restart Home Assistant.
+
+# Log kayıtlarını system_log_event olayı olarak yayınlar.
+# hue_bridge_watchdog.yaml ve tts_failover_watchdog.yaml bunu gerektirir.
+# EN: publishes log records as events; both log-based watchdogs need this.
+system_log:
+  fire_event: true
+
+# tts_failover_watchdog.yaml bu komutu çağırır.
+# EN: called by tts_failover_watchdog.yaml.
+shell_command:
+  tts_failover: python3 /config/scripts/tts_failover.py

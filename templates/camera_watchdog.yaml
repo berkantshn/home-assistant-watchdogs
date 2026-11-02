@@ -1,0 +1,69 @@
+# Made By FALCREB
+# Kamera Bekçisi: tüm camera.* varlıklarını izler (sonradan eklenenler dahil, liste
+# tutmak gerekmez). Kamera 10 dakika erişilemez kalırsa bildirir, uzun bir kesintiden
+# sonra geri gelince tekrar bildirir.
+# EN: Camera Watchdog. Follows every camera.* entity with no list to maintain.
+# Alerts after 10 minutes unavailable, and again when the camera returns.
+#
+# Doldurulacaklar / Replace before use:
+#   notify.mobile_app_example, notify.example_second_channel
+#
+# Not: Tetikleyici her state_changed olayını dinler, yani koşul şablonu sistemdeki
+# her durum değişikliğinde çalışır. Çok sayıda varlık varsa ve yük önemliyse
+# kameraları elle listeleyen state tetikleyicisini tercih edin.
+# EN: the trigger listens to all state_changed events, so the condition runs on
+# every state change. On a busy system, a listed state trigger is cheaper.
+# Bu yüzden Trace listesi kamera dışı kayıtlarla hızla dolar; gerekirse
+# trace.stored_traces değerini artırın.
+# EN: traces also fill quickly with non-camera runs; raise trace.stored_traces if needed.
+#
+# Not: continue_on_error var olmayan bir notify servisini kapsamaz; o adımda akış
+# durur ve sonraki kanal çalışmaz. Kullanmadığınız kanalı silin.
+# EN: continue_on_error does not cover a missing notify service: the run stops there
+# and later channels are skipped. Delete any channel you do not use.
+
+- id: example_camera_watchdog
+  alias: Example - Camera Watchdog
+  description: Alerts when any camera stays unavailable for 10 minutes and when it returns.
+  triggers:
+  - trigger: event
+    event_type: state_changed
+  conditions:
+  - condition: template
+    value_template: >-
+      {% set e = trigger.event.data %}
+      {% set new = e.new_state.state if e.new_state else none %}
+      {% set old = e.old_state.state if e.old_state else none %}
+      {{ e.entity_id.startswith('camera.') and e.new_state is not none and (
+           (new == 'unavailable' and old != 'unavailable')
+           or (old == 'unavailable' and new not in ['unavailable', 'unknown']
+               and (now() - e.old_state.last_changed).total_seconds() >= 600) ) }}
+  actions:
+  - variables:
+      camera: "{{ trigger.event.data.entity_id }}"
+      camera_name: "{{ trigger.event.data.new_state.name }}"
+      went_offline: "{{ trigger.event.data.new_state.state == 'unavailable' }}"
+  # Kamera 10 dakika içinde dönerse wait tamamlanır ve aşağıdaki koşul akışı durdurur.
+  # EN: if the camera returns within 10 minutes, the condition below stops the run.
+  - wait_template: "{{ not went_offline or not is_state(camera, 'unavailable') }}"
+    timeout:
+      minutes: 10
+    continue_on_timeout: true
+  - condition: template
+    value_template: "{{ not went_offline or not wait.completed }}"
+  - variables:
+      alert_message: >-
+        {% if went_offline %}Camera unavailable for 10 minutes: {{ camera_name }}{% else %}Camera back online: {{ camera_name }}{% endif %}
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.example_second_channel
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: parallel
+  max: 20

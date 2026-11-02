@@ -1,0 +1,56 @@
+# Made By FALCREB
+# Sensör Bekçisi: kritik bir sensör 15 dakika erişilemez kalırsa veya pili
+# %20'nin altına düşerse bildirim gönderir.
+# EN: Sensor Watchdog. Notifies when a critical sensor stays offline for
+# 15 minutes or its battery falls below 20%.
+#
+# Doldurulacaklar / Replace before use:
+#   binary_sensor.example_*, sensor.example_*_battery: kendi varlıklarınız / your entities
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#   Dedektörünüz sensor.example_gas gibi görünüyorsa listeye onu yazın.
+#   EN: if your detector is exposed as sensor.example_gas, list that id instead.
+#
+# Not: numeric_state yalnızca eşik aşıldığı anda tetiklenir. Pili kurulumdan önce
+# %20'nin altına inmiş bir sensör, tekrar yükselip düşene veya erişilemez olup düşük
+# değerle dönene kadar uyarı üretmez.
+# EN: numeric_state fires only on crossing the threshold, so a battery that is
+# already low when you install this will not alert until it rises and falls again
+# or returns low from unavailable.
+
+- id: example_sensor_watchdog
+  alias: Example - Sensor Watchdog (offline / low battery)
+  description: Notifies when a critical sensor goes offline or its battery runs low.
+  triggers:
+  - trigger: state
+    id: offline
+    entity_id:
+    - binary_sensor.example_gas
+    - binary_sensor.example_smoke
+    - binary_sensor.example_water_leak
+    to:
+    - unavailable
+    - unknown
+    for:
+      minutes: 15
+  - trigger: numeric_state
+    id: battery
+    entity_id:
+    - sensor.example_smoke_battery
+    - sensor.example_water_leak_battery
+    below: 20
+  conditions: []
+  actions:
+  - variables:
+      sensor_name: "{{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}"
+      alert_message: >-
+        {% if trigger.id == 'offline' %}Sensor offline for 15 minutes: {{ sensor_name }}. It cannot
+        detect anything right now.{% else %}Low battery ({{ trigger.to_state.state }}%):
+        {{ sensor_name }}{% endif %}
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: queued

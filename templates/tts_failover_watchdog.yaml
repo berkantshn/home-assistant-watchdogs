@@ -1,0 +1,58 @@
+# Made By FALCREB
+# TTS Yedek Bekçisi: scripts/tts_failover.py betiğini çalıştırır ve ses motoru
+# değiştiğinde bildirim gönderir. Asıl geçiş kararını betik verir.
+# EN: TTS Failover Watchdog. Runs scripts/tts_failover.py and notifies when the
+# engine changes. The script makes the actual switching decision.
+#
+# Gereksinim / Requires:
+#   - configuration.example.yaml: system_log.fire_event ve shell_command.tts_failover
+#   - /config/scripts/tts_failover.py
+#   - secrets.yaml: tts_primary_key, tts_primary_region, tts_failover_token
+#
+# Doldurulacaklar / Replace before use:
+#   name: homeassistant.components.microsoft.tts -> birincil TTS'inizin logger adı
+#     EN: logger name of your primary TTS integration
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#
+# Not: Betik hata verirse (ok: false) changed alanı gelmez ve bildirim gitmez.
+# Kurulumdan sonra otomasyonun Trace ekranında stdout çıktısını kontrol edin.
+# EN: on script errors (ok: false) nothing is sent. Check stdout in the trace.
+
+- id: example_tts_failover_watchdog
+  alias: Example - TTS Failover Watchdog
+  description: Switches the assistant pipeline between primary and fallback TTS.
+  triggers:
+  - trigger: event
+    event_type: system_log_event
+    event_data:
+      name: homeassistant.components.microsoft.tts
+  # Ağ hatalarını sağlayıcı değil, genel tts bileşeni loglar.
+  # EN: network errors are logged by the generic tts component, not the provider.
+  - trigger: event
+    event_type: system_log_event
+    event_data:
+      name: homeassistant.components.tts
+  - trigger: time_pattern
+    minutes: /15
+  - trigger: homeassistant
+    event: start
+  conditions: []
+  actions:
+  - action: shell_command.tts_failover
+    response_variable: result
+  - variables:
+      r: "{{ result.stdout | from_json if result.stdout else {} }}"
+  - condition: template
+    value_template: "{{ r.changed | default(false) }}"
+  - variables:
+      alert_message: >-
+        {% if r.primary_healthy %}Primary TTS recovered. The assistant is back on {{ r.engine }}.{% else %}Primary TTS failed. The assistant was switched to {{ r.engine }}.{% endif %}
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: single
+  max_exceeded: silent
