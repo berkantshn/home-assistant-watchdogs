@@ -49,6 +49,10 @@
       <label class="check"><input type="checkbox" name="w" value="sensor" checked><span data-t="sensor"></span></label>
       <label class="check"><input type="checkbox" name="w" value="hue"><span data-t="hue"></span></label>
       <label class="check"><input type="checkbox" name="w" value="tts"><span data-t="tts"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="automation"><span data-t="automation"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="backup"><span data-t="backup"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="disk"><span data-t="disk"></span></label>
+      <label class="check"><input type="checkbox" name="w" value="door"><span data-t="door"></span></label>
     </fieldset>
     <fieldset>
       <legend data-t="values"></legend>
@@ -58,6 +62,11 @@
 binary_sensor.boiler_gas</textarea></label>
       <label class="only" data-for="sensor"><span data-t="batteries"></span><textarea id="batteries" spellcheck="false">sensor.kitchen_smoke_battery</textarea></label>
       <label class="only" data-for="hue"><span data-t="hueEntry"></span><input type="text" id="hueEntry" spellcheck="false"><small data-t="hueHelp"></small></label>
+      <label class="only" data-for="automation"><span data-t="automations"></span><textarea id="automations" spellcheck="false">automation.critical_alarm
+automation.critical_leak</textarea></label>
+      <label class="only" data-for="disk"><span data-t="disks"></span><textarea id="disks" spellcheck="false">sensor.system_monitor_disk_usage_config</textarea></label>
+      <label class="only" data-for="door"><span data-t="doors"></span><textarea id="doors" spellcheck="false">binary_sensor.front_door
+binary_sensor.kitchen_window</textarea></label>
     </fieldset>
     <button class="primary" type="submit" data-t="build"></button>
     <p id="error" role="alert"></p>
@@ -87,7 +96,9 @@ const T = {
     pick:'1. Choose watchdogs', values:'2. Your values', build:'Build my automations',
     camera:'Camera: any camera unavailable for 10 minutes', sensor:'Sensor: critical sensor offline for 15 minutes, or battery below 20%',
     hue:'Hue bridge: reconnect failures, reloads the integration', tts:'Voice (TTS): moves to a local fallback when the cloud fails (needs extra setup, see the README)',
+    automation:'Automation: critical automations off, unavailable or failing', backup:'Backup: no successful automatic backup for 48 hours', disk:'Disk: usage above warning/critical thresholds', door:'Door: listed doors/windows left open for 10 minutes',
     notify:'Notification service', second:'Second notification channel (optional)', sensors:'Critical sensors, one per line', batteries:'Battery sensors, one per line',
+    automations:'Critical automations, one per line', disks:'Disk usage sensors, one per line', doors:'Door/window binary sensors, one per line',
     hueEntry:'Hue config entry ID', hueHelp:"In Developer Tools > Template, run {{ config_entry_id('light.your_hue_lamp') }}",
     copy:'Copy', copied:'Copied', download:'Download automations.yaml',
     next1:'Back up Home Assistant.', next2:'Paste this into automations.yaml. Hue and voice also need the additions in configuration.example.yaml.', next3:'Check the configuration, restart, then trigger each watchdog and read its trace.',
@@ -99,14 +110,25 @@ const T = {
     pick:'1. Bekçileri seç', values:'2. Kendi değerlerin', build:'Otomasyonlarımı oluştur',
     camera:'Kamera: herhangi bir kamera 10 dakika erişilemez olursa', sensor:'Sensör: kritik sensör 15 dakika çevrimdışıysa veya pil %20 altındaysa',
     hue:'Hue köprüsü: yeniden bağlanma başarısızsa entegrasyonu yeniden yükler', tts:"Ses (TTS): bulut bozulunca yerel yedeğe geçer (ek kurulum gerekir, README'ye bak)",
+    automation:'Otomasyon: kritik otomasyon kapanırsa, erişilemez kalırsa veya hata verirse', backup:'Yedek: 48 saattir başarılı otomatik yedek yoksa', disk:'Disk: kullanım uyarı/kritik eşiği geçerse', door:'Kapı: listedeki kapı/pencere 10 dakika açık kalırsa',
     notify:'Bildirim servisi', second:'İkinci bildirim kanalı (isteğe bağlı)', sensors:'Kritik sensörler, her satıra bir tane', batteries:'Pil sensörleri, her satıra bir tane',
+    automations:'Kritik otomasyonlar, her satıra bir tane', disks:'Disk kullanım sensörleri, her satıra bir tane', doors:'Kapı/pencere ikili sensörleri, her satıra bir tane',
     hueEntry:'Hue yapılandırma kimliği', hueHelp:"Geliştirici Araçları > Şablon içinde şunu çalıştır: {{ config_entry_id('light.hue_lambaniz') }}",
     copy:'Kopyala', copied:'Kopyalandı', download:'automations.yaml indir',
     next1:"Home Assistant'ın yedeğini al.", next2:"Bunu automations.yaml dosyasına yapıştır. Hue ve ses için configuration.example.yaml eklemeleri de gerekir.", next3:'Yapılandırmayı kontrol et, yeniden başlat, sonra her bekçiyi tetikleyip izini (trace) oku.',
     errSelect:'En az bir bekçi seç.', errField:'İşaretli alanları kontrol et.',
   },
 };
-const FILES = { camera:'camera_watchdog', sensor:'sensor_watchdog', hue:'hue_bridge_watchdog', tts:'tts_failover_watchdog' };
+const FILES = {
+  camera:'camera_watchdog',
+  sensor:'sensor_watchdog',
+  hue:'hue_bridge_watchdog',
+  tts:'tts_failover_watchdog',
+  automation:'automation_watchdog',
+  backup:'backup_watchdog',
+  disk:'disk_space_watchdog',
+  door:'door_left_open_watchdog',
+};
 const $ = (id) => document.getElementById(id);
 let lang = (navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
 
@@ -125,10 +147,19 @@ const list = (id) => $(id).value.split('\n').map((l) => l.trim()).filter(Boolean
 let lastOutput = '';
 $('form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
-  const opts = { notify:$('notify').value.trim(), second:$('second').value.trim(), hueEntry:$('hueEntry').value.trim(), sensors:list('sensors'), batteries:list('batteries') };
+  const opts = {
+    notify:$('notify').value.trim(),
+    second:$('second').value.trim(),
+    hueEntry:$('hueEntry').value.trim(),
+    sensors:list('sensors'),
+    batteries:list('batteries'),
+    automations:list('automations'),
+    disks:list('disks'),
+    doors:list('doors'),
+  };
   const s = selected();
   const errors = validate(s, opts);
-  ['notify','second','hueEntry','sensors','batteries'].forEach((id) => $(id).classList.toggle('invalid', errors.includes(id)));
+  ['notify','second','hueEntry','sensors','batteries','automations','disks','doors'].forEach((id) => $(id).classList.toggle('invalid', errors.includes(id)));
   if (errors.length) {
     $('error').textContent = T[lang][errors.includes('select') ? 'errSelect' : 'errField'];
     $('result').hidden = true;

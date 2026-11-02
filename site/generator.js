@@ -4,6 +4,9 @@
 
 const NOTIFY = /^notify\.[a-z0-9_]+$/;
 const ENTITY = /^(binary_sensor|sensor)\.[a-z0-9_]+$/;
+const AUTOMATION_ENTITY = /^automation\.[a-z0-9_]+$/;
+const SENSOR_ENTITY = /^sensor\.[a-z0-9_]+$/;
+const BINARY_SENSOR_ENTITY = /^binary_sensor\.[a-z0-9_]+$/;
 const HUE_ENTRY = /^[A-Za-z0-9]+$/;
 
 // Kullanılmayan ikinci bildirim kanalının bloğunu siler (README: kullanmadığınızı silin).
@@ -42,6 +45,18 @@ export function validate(selected, opts) {
     if (!sensors.length || !sensors.every((e) => ENTITY.test(e))) errors.push('sensors');
     if (!batteries.length || !batteries.every((e) => ENTITY.test(e))) errors.push('batteries');
   }
+  if (selected.includes('automation')) {
+    const automations = opts.automations || [];
+    if (!automations.length || !automations.every((e) => AUTOMATION_ENTITY.test(e))) errors.push('automations');
+  }
+  if (selected.includes('disk')) {
+    const disks = opts.disks || [];
+    if (!disks.length || !disks.every((e) => SENSOR_ENTITY.test(e))) errors.push('disks');
+  }
+  if (selected.includes('door')) {
+    const doors = opts.doors || [];
+    if (!doors.length || !doors.every((e) => BINARY_SENSOR_ENTITY.test(e))) errors.push('doors');
+  }
   return errors;
 }
 
@@ -57,6 +72,20 @@ export function generate(templates, selected, opts) {
     if (key === 'sensor') {
       text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.sensors);
       text = replaceEntityList(text, /^\s*- sensor\.example_\w+_battery/, opts.batteries);
+    }
+    if (key === 'automation') {
+      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
+      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
+      text = replaceEntityList(text, /^\s*- automation\.example_critical_/, opts.automations);
+    }
+    if (key === 'disk') {
+      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
+      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
+      text = replaceEntityList(text, /^\s*- sensor\.system_monitor_disk_usage\b/, opts.disks);
+    }
+    if (key === 'door') {
+      text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.doors);
+      text = replaceEntityList(text, /^\s*- binary_sensor\.example_/, opts.doors);
     }
     text = text.replaceAll('notify.mobile_app_example', opts.notify);
     // Yorumlar kısaltılır: geriye yalnızca çalışan otomasyon kalır.
