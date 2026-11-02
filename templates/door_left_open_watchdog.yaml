@@ -1,0 +1,63 @@
+# Made By FALCREB
+# Açık Kalan Kapı Bekçisi: listedeki kapı veya pencere sensörü 10 dakika açık kalırsa
+# adıyla bildirir, kapanınca da haber verir.
+# EN: Door Left Open Watchdog. Names the door or window sensor that stays open for
+# 10 minutes, and reports when it closes again.
+#
+# Doldurulacaklar / Replace before use:
+#   binary_sensor.example_*: kendi kapı ve pencere sensörleriniz, 2 yerde aynı liste
+#     EN: your door and window sensors, same list in both triggers
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#   Süreyi değiştirirseniz minutes: 10, 600 ve "10 minutes" birlikte değişmeli.
+#   EN: to change the wait, update minutes: 10, 600 and "10 minutes" together.
+#   "Kapandı" mesajını istemiyorsanız closed tetikleyicisini silin.
+#   EN: delete the closed trigger if you do not want the closed message.
+#
+# Not: Sayaç, sensörün açık konuma geçtiği anda başlar. Home Assistant yeniden
+# başlarken zaten açık olan kapı, kapanıp yeniden açılana kadar uyarı üretmez; kapanırken
+# önceki uyarı olmadan "kapandı" mesajı gelebilir. Var olmayan veya erişilemez sensör de
+# uyarı üretmez; erişilemezlik için sensor_watchdog.yaml dosyasını kullanın.
+# EN: the timer starts when the sensor changes to open. A door already open during a
+# restart will not alert until it closes and opens again, and its closing may send the
+# closed message with no earlier alert. A missing or unavailable sensor sends nothing;
+# use sensor_watchdog.yaml for those.
+
+- id: example_door_left_open_watchdog
+  alias: Example - Door Left Open Watchdog
+  description: Alerts when a listed door or window stays open for 10 minutes and when it closes.
+  triggers:
+  - trigger: state
+    id: open
+    entity_id:
+    - binary_sensor.example_front_door
+    - binary_sensor.example_window
+    to: 'on'
+    for:
+      minutes: 10
+  - trigger: state
+    id: closed
+    entity_id:
+    - binary_sensor.example_front_door
+    - binary_sensor.example_window
+    from: 'on'
+    to: 'off'
+  conditions:
+  # "Kapandı" yalnızca açık kalma uyarısı gitmiş olabilecek kadar uzun süreden sonra gelir.
+  # EN: the closed message follows only an opening long enough to have alerted.
+  - condition: template
+    value_template: >-
+      {{ trigger.id == 'open' or
+         (now() - trigger.from_state.last_changed).total_seconds() >= 600 }}
+  actions:
+  - variables:
+      door_name: "{{ trigger.to_state.name }}"
+      alert_message: >-
+        {% if trigger.id == 'open' %}Open for 10 minutes: {{ door_name }}{% else %}Closed again: {{ door_name }}{% endif %}
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: queued

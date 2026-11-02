@@ -1,0 +1,118 @@
+# Made By FALCREB
+# Otomasyon Bekçisi: listedeki kritik bir otomasyon kapatılırsa, erişilemez kalırsa
+# veya çalışırken hata verirse bildirir. Her gün de listeyi kontrol eder; böylece
+# bekçi kurulmadan önce kapatılmış bir otomasyon aylarca fark edilmeden kalmaz.
+# EN: Automation Watchdog. Alerts when a listed critical automation is turned off,
+# stays unavailable or logs an error. A daily check also catches one that was
+# already off or missing before this watchdog was installed.
+#
+# Gereksinim / Requires: system_log.fire_event (configuration.example.yaml)
+#
+# Doldurulacaklar / Replace before use:
+#   automation.example_critical_*: kendi otomasyonlarınız, 3 yerde aynı liste
+#     (turned_off, unavailable, critical_automations). Bekçinin kendisini eklemeyin.
+#     EN: your automations; keep the same list in all 3 places. Do not list this watchdog.
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#   09:00:00: günlük kontrol saati / daily check time
+#
+# Not: Liste kasıtlıdır. Her otomasyonu izlemek için state_changed tetikleyicisi
+# gerekirdi ve koşul sistemdeki her durum değişikliğinde çalışırdı.
+# EN: the list is deliberate. Following every automation would need a state_changed
+# trigger, which runs the condition on every state change in the system.
+#
+# Not: Hata yakalama log kaydına bağlıdır. Yalnızca ERROR düzeyi sayılır: koşul
+# hataları ve "Already running" WARNING olduğu için yakalanmaz. Otomasyonun beklediği
+# script hatası yakalanır. Logger adı, otomasyonun varlık kimliğinden gelir
+# (homeassistant.components.automation.<kimlik>). Güncellemelerden sonra kontrol edin.
+# EN: error detection reads the log, ERROR level only, so condition errors and
+# "Already running" warnings are not caught. An error in a script the automation waits
+# for is caught. The logger name comes from the entity id. Re-check after updates.
+#
+# Not: Sistemdeki her ERROR kaydı bekçiyi uyandırır ve koşulda elenir, bu yüzden Trace
+# listesi başka kayıtlarla dolabilir; gerekirse trace.stored_traces değerini artırın.
+# EN: every ERROR in the system wakes this watchdog and the condition filters it, so
+# traces can fill with other runs; raise trace.stored_traces if needed.
+#
+# Not: Hata bildirimleri en fazla 10 dakikada bir gider ve bu süre bekçinin son
+# çalışmasından sayılır. Aradaki diğer hatalar için ayrı bildirim gelmez.
+# EN: error alerts are limited to one per 10 minutes, counted from this watchdog's
+# last run. Other errors in that window send no separate alert.
+#
+# Not: Bekçi kendini izleyemez; kapatılırsa veya Home Assistant durursa bildirim gelmez.
+# Kendi bildirim hatası kendini tetiklemez, döngü oluşmaz.
+# EN: it cannot watch itself. Its own notification errors do not retrigger it.
+
+- id: example_automation_watchdog
+  alias: Example - Automation Watchdog
+  description: Alerts when a critical automation is off, unavailable or logs an error.
+  variables:
+    critical_automations:
+    - automation.example_critical_alarm
+    - automation.example_critical_leak
+    error_cooldown_seconds: 600
+  triggers:
+  # Yalnızca açıkken kapanma sayılır; yeniden başlatmada unavailable > off bildirim üretmez.
+  # EN: only on > off counts, so a restart (unavailable > off) sends nothing.
+  - trigger: state
+    id: turned_off
+    entity_id:
+    - automation.example_critical_alarm
+    - automation.example_critical_leak
+    from: 'on'
+    to: 'off'
+    for:
+      minutes: 1
+  # 5 dakika, yeniden yüklemedeki kısa erişilemezliği eler.
+  # EN: 5 minutes filters out the brief unavailable state during a reload.
+  - trigger: state
+    id: unavailable
+    entity_id:
+    - automation.example_critical_alarm
+    - automation.example_critical_leak
+    to: unavailable
+    for:
+      minutes: 5
+  - trigger: event
+    id: error
+    event_type: system_log_event
+    event_data:
+      level: ERROR
+  - trigger: time
+    id: daily_check
+    at: '09:00:00'
+  conditions:
+  - condition: template
+    value_template: >-
+      {% if trigger.id == 'error' %}
+        {% set source = trigger.event.data.name | string %}
+        {% set entity = 'automation.' ~ source.split('.')[-1] %}
+        {% set last = this.attributes.last_triggered %}
+        {{ source.startswith('homeassistant.components.automation.')
+           and entity in critical_automations
+           and entity != this.entity_id
+           and (last is none or (now() - last).total_seconds() >= error_cooldown_seconds) }}
+      {% else %}
+        true
+      {% endif %}
+  actions:
+  - variables:
+      alert_message: >-
+        {% if trigger.id == 'turned_off' %}Critical automation turned off: {{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}
+        {%- elif trigger.id == 'unavailable' %}Critical automation unavailable for 5 minutes: {{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}
+        {%- elif trigger.id == 'error' %}{% set entity = 'automation.' ~ (trigger.event.data.name | string).split('.')[-1] %}Critical automation error: {{ state_attr(entity, 'friendly_name') or entity }}. {{ (trigger.event.data.message | join(' '))[:200] }}
+        {%- else %}{% set found = namespace(items=[]) %}{% for e in critical_automations if not is_state(e, 'on') %}{% set found.items = found.items + [(state_attr(e, 'friendly_name') or e) ~ ' (' ~ states(e) ~ ')'] %}{% endfor %}{% if found.items %}Critical automations not running: {{ found.items | join(', ') }}{% endif %}
+        {%- endif %}
+  # Günlük kontrolde sorun yoksa mesaj boştur ve akış burada biter.
+  # EN: the daily check leaves the message empty when all is well, ending the run here.
+  - condition: template
+    value_template: "{{ alert_message | length > 0 }}"
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: queued
+  max: 10
+  max_exceeded: silent

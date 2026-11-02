@@ -92,8 +92,8 @@ bridge group contains a lamp you did not intend.
 ### 7. Add watchdogs
 
 A watchdog turns a silent failure into a notification. See the [templates](../templates) for the Hue
-bridge, sensors, cameras and TTS. The Hue watchdog depends on
-`system_log: fire_event: true`.
+bridge, sensors, cameras, TTS, automations, backups, disk space and open doors. The Hue, TTS and
+automation watchdogs depend on `system_log: fire_event: true`.
 
 ### 8. Keep voice working without the cloud
 

@@ -1,0 +1,69 @@
+# Made By FALCREB
+# Yedek Bekçisi: Home Assistant'ın Backup entegrasyonundan son başarılı otomatik
+# yedeğin tarihini okur. Yedek 48 saatten eskiyse veya tarih okunamıyorsa bildirir.
+# EN: Backup Watchdog. Reads the last successful automatic backup time from the core
+# Backup integration and alerts if it is older than 48 hours or cannot be read.
+#
+# Doldurulacaklar / Replace before use:
+#   notify.mobile_app_example: kendi bildirim servisiniz / your notify service
+#   max_age_hours: 48: izin verilen en uzun süre / longest allowed gap
+#   09:10:00, 21:10:00: kontrol saatleri / check times
+#   Arayüz dili İngilizce değilse sensor.backup_* kimliklerini Developer Tools > States
+#   ekranından doğrulayın.
+#   EN: if your UI language is not English, confirm the sensor.backup_* ids in
+#   Developer Tools > States.
+#
+# Not: Bu sensör yalnızca Backup entegrasyonunun otomatik yedeklerini sayar. Elle
+# alınan yedek veya ayrı bir eklentinin aldığı yedek saati güncellemez; otomatik yedek
+# hiç kurulmadıysa bekçi "tarih okunamadı" diye bildirir.
+# EN: only the Backup integration's automatic backups count. Manual backups and
+# backups made by other add-ons do not update the sensor. With no automatic backup
+# configured, the watchdog reports that no timestamp could be read.
+#
+# Not: Bekçi bir yedeğin geri yüklenebilir olduğunu kanıtlamaz. Ara sıra geri yükleme
+# denemesi yapın.
+# EN: this does not prove a backup can be restored. Test a restore now and then.
+
+- id: example_backup_watchdog
+  alias: Example - Backup Watchdog
+  description: Alerts when the last successful automatic backup is too old or unknown.
+  triggers:
+  # İki kontrol: Home Assistant o saatte yeniden başlıyorsa diğeri yakalar.
+  # EN: two checks, so a restart at one of these times cannot skip the whole day.
+  - trigger: time
+    at:
+    - '09:10:00'
+    - '21:10:00'
+  conditions: []
+  actions:
+  - variables:
+      max_age_hours: 48
+      last_success: sensor.backup_last_successful_automatic_backup
+      last_attempt: sensor.backup_last_attempted_automatic_backup
+      manager_state: sensor.backup_backup_manager_state
+  # Geçerli tarih hemen geçer. unknown, unavailable veya eksik sensör 10 dakika
+  # beklenir; böylece geçici durum bildirim üretmez, kalıcı durum sessizce geçmez.
+  # EN: a valid time passes at once. unknown, unavailable or a missing sensor gets
+  # 10 minutes, so a brief gap stays quiet and a lasting one still alerts.
+  - wait_template: "{{ as_timestamp(states(last_success), 0) > 0 }}"
+    timeout:
+      minutes: 10
+    continue_on_timeout: true
+  - variables:
+      backup_time: "{{ as_timestamp(states(last_success), 0) }}"
+      backup_age_hours: "{{ ((as_timestamp(now()) - backup_time) / 3600) | round(1) }}"
+  - condition: template
+    value_template: "{{ backup_time <= 0 or backup_age_hours >= max_age_hours }}"
+  - variables:
+      alert_message: >-
+        {% if backup_time <= 0 %}Backup time could not be read ({{ states(last_success) }}). Automatic backups may be off, may never have succeeded, or the Backup integration may be down.{% else %}No successful automatic backup for {{ backup_age_hours }} hours (limit {{ max_age_hours }}).{% endif %}
+        Last attempt: {{ states(last_attempt) }}. Manager: {{ states(manager_state) }}.
+  - action: notify.persistent_notification
+    data:
+      message: "{{ alert_message }}"
+  - action: notify.mobile_app_example
+    continue_on_error: true
+    data:
+      message: "{{ alert_message }}"
+  mode: single
+  max_exceeded: silent
